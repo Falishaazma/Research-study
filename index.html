@@ -1,0 +1,433 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>OpenScholar AI - Academic Research Workspace</title>
+  <script src="https://cdn.tailwindcss.com"></script>
+  <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css" />
+</head>
+<body class="bg-slate-50 text-slate-800 font-sans min-h-screen flex flex-col">
+
+  <!-- Navigation Bar -->
+  <header class="bg-white border-b border-slate-200 sticky top-0 z-30 shadow-sm">
+    <div class="max-w-7xl mx-auto px-4 py-3 flex items-center justify-between">
+      <div class="flex items-center gap-3">
+        <div class="w-10 h-10 rounded-lg bg-indigo-600 flex items-center justify-center text-white text-xl shadow-md">
+          <i class="fa-solid fa-graduation-cap"></i>
+        </div>
+        <div>
+          <h1 class="font-bold text-lg text-slate-900 leading-tight">OpenScholar <span class="text-indigo-600 text-xs px-2 py-0.5 rounded-full bg-indigo-50 border border-indigo-200">Sathi Agent</span></h1>
+          <p class="text-xs text-slate-500">Decentralized Scholarly Synthesis & Literature Mining</p>
+        </div>
+      </div>
+      <div class="flex items-center gap-3">
+        <button onclick="openSettingsModal()" class="px-3 py-1.5 text-xs font-medium bg-slate-100 hover:bg-slate-200 text-slate-700 rounded-lg border border-slate-300 transition flex items-center gap-1.5">
+          <i class="fa-solid fa-key text-amber-500"></i> Gemini API Key
+        </button>
+      </div>
+    </div>
+  </header>
+
+  <!-- Main Workspace -->
+  <main class="max-w-7xl mx-auto px-4 py-6 flex-1 w-full grid grid-cols-1 lg:grid-cols-12 gap-6">
+
+    <!-- Left Sidebar: Project Navigator -->
+    <aside class="lg:col-span-3 space-y-4">
+      <div class="bg-white p-4 rounded-xl border border-slate-200 shadow-sm">
+        <div class="flex items-center justify-between mb-3">
+          <h2 class="font-semibold text-sm text-slate-800 uppercase tracking-wider">Projects</h2>
+          <button onclick="createNewProject()" class="text-indigo-600 hover:text-indigo-800 text-xs font-semibold flex items-center gap-1">
+            <i class="fa-solid fa-plus"></i> New
+          </button>
+        </div>
+        <div id="projectList" class="space-y-1.5 max-h-48 overflow-y-auto pr-1"></div>
+      </div>
+
+      <!-- Active Project Basket -->
+      <div class="bg-white p-4 rounded-xl border border-slate-200 shadow-sm flex flex-col">
+        <div class="flex items-center justify-between mb-3">
+          <h2 class="font-semibold text-sm text-slate-800 uppercase tracking-wider">Saved Papers (<span id="basketCount">0</span>)</h2>
+          <button onclick="clearBasket()" class="text-slate-400 hover:text-rose-600 text-xs"><i class="fa-solid fa-trash-can"></i></button>
+        </div>
+        <div id="savedPapersList" class="space-y-2 text-xs overflow-y-auto max-h-72 pr-1 flex-1">
+          <p class="text-slate-400 italic">No papers saved to this project yet.</p>
+        </div>
+      </div>
+    </aside>
+
+    <!-- Center/Right: Functional Modules -->
+    <section class="lg:col-span-9 space-y-6">
+      <!-- Tabs -->
+      <div class="flex border-b border-slate-200 bg-white px-3 pt-2 rounded-t-xl border border-b-0 border-slate-200">
+        <button id="tab-search" onclick="switchTab('search')" class="tab-btn px-4 py-2 text-sm font-semibold text-indigo-600 border-b-2 border-indigo-600 flex items-center gap-2">
+          <i class="fa-solid fa-magnifying-glass"></i> Live Literature Search
+        </button>
+        <button id="tab-agent" onclick="switchTab('agent')" class="tab-btn px-4 py-2 text-sm font-semibold text-slate-500 hover:text-slate-800 border-b-2 border-transparent flex items-center gap-2">
+          <i class="fa-solid fa-brain"></i> AI Research Studio
+        </button>
+        <button id="tab-export" onclick="switchTab('export')" class="tab-btn px-4 py-2 text-sm font-semibold text-slate-500 hover:text-slate-800 border-b-2 border-transparent flex items-center gap-2">
+          <i class="fa-solid fa-file-shield"></i> Citations & AI Declaration
+        </button>
+      </div>
+
+      <!-- Panel 1: Literature Search (OpenAlex) -->
+      <div id="panel-search" class="bg-white p-6 rounded-b-xl border border-slate-200 shadow-sm space-y-4">
+        <form onsubmit="searchOpenAlex(event)" class="flex gap-2">
+          <input id="searchQuery" type="text" placeholder="Search 250M+ papers (e.g., 'Antimicrobial stewardship ICU mortality' or DOI)..." required
+            class="flex-1 px-4 py-2.5 text-sm border border-slate-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-indigo-500 focus:border-indigo-500" />
+          <button type="submit" id="searchBtn" class="bg-indigo-600 hover:bg-indigo-700 text-white font-semibold text-sm px-6 py-2.5 rounded-lg transition flex items-center gap-2">
+            <span>Search</span>
+          </button>
+        </form>
+
+        <div id="searchResults" class="space-y-3 pt-2">
+          <p class="text-sm text-slate-400 text-center py-8">Enter keywords above to retrieve peer-reviewed papers via OpenAlex API.</p>
+        </div>
+      </div>
+
+      <!-- Panel 2: AI Research Studio (Gemini) -->
+      <div id="panel-agent" class="bg-white p-6 rounded-b-xl border border-slate-200 shadow-sm space-y-4 hidden">
+        <div class="grid grid-cols-1 md:grid-cols-3 gap-3">
+          <button onclick="runAgentWorkflow('gap')" class="p-3 text-left border border-slate-200 rounded-lg hover:border-indigo-500 hover:bg-indigo-50/50 transition">
+            <h3 class="text-xs font-bold text-indigo-900 uppercase mb-1"><i class="fa-solid fa-chart-pie mr-1"></i> Literature Gap Finder</h3>
+            <p class="text-xs text-slate-500">Detect contradictions, unexplored niches, and methodology limitations.</p>
+          </button>
+          <button onclick="runAgentWorkflow('matrix')" class="p-3 text-left border border-slate-200 rounded-lg hover:border-indigo-500 hover:bg-indigo-50/50 transition">
+            <h3 class="text-xs font-bold text-indigo-900 uppercase mb-1"><i class="fa-solid fa-table mr-1"></i> Synthesis Matrix</h3>
+            <p class="text-xs text-slate-500">Build comparative summary tables of designs, cohorts, and outcomes.</p>
+          </button>
+          <button onclick="runAgentWorkflow('chapter')" class="p-3 text-left border border-slate-200 rounded-lg hover:border-indigo-500 hover:bg-indigo-50/50 transition">
+            <h3 class="text-xs font-bold text-indigo-900 uppercase mb-1"><i class="fa-solid fa-pen-nib mr-1"></i> Thesis Section Drafter</h3>
+            <p class="text-xs text-slate-500">Draft grounded academic sections with structured inline citations.</p>
+          </button>
+        </div>
+
+        <div>
+          <label class="block text-xs font-bold uppercase text-slate-600 mb-1">Custom Agent Instructions / Focus Area</label>
+          <textarea id="agentCustomPrompt" rows="2" placeholder="Optional: e.g., 'Focus specifically on prospective RCT studies in low-resource settings...'"
+            class="w-full text-xs p-3 border border-slate-300 rounded-lg focus:ring-2 focus:ring-indigo-500 focus:outline-none"></textarea>
+        </div>
+
+        <div class="pt-2">
+          <div class="flex items-center justify-between mb-2">
+            <span class="text-xs font-bold uppercase text-slate-700">Synthesized Agent Output</span>
+            <button onclick="copyToClipboard('agentOutput')" class="text-xs text-indigo-600 hover:text-indigo-800 font-medium"><i class="fa-regular fa-copy"></i> Copy</button>
+          </div>
+          <div id="agentOutput" class="p-4 bg-slate-50 rounded-lg border border-slate-200 text-sm whitespace-pre-wrap leading-relaxed min-h-[160px] text-slate-700">
+            Select a workflow above to analyze papers saved in your active project basket.
+          </div>
+        </div>
+      </div>
+
+      <!-- Panel 3: Citations & AI Declaration -->
+      <div id="panel-export" class="bg-white p-6 rounded-b-xl border border-slate-200 shadow-sm space-y-6 hidden">
+        <div>
+          <div class="flex items-center justify-between mb-2">
+            <h3 class="text-sm font-bold text-slate-800 uppercase">Bibliography Generator</h3>
+            <div class="flex gap-2">
+              <select id="citationStyle" onchange="generateCitations()" class="text-xs border border-slate-300 rounded px-2 py-1">
+                <option value="vancouver">Vancouver Style</option>
+                <option value="apa">APA 7th Edition</option>
+                <option value="harvard">Harvard Style</option>
+              </select>
+              <button onclick="copyToClipboard('citationBox')" class="text-xs text-indigo-600 font-medium"><i class="fa-regular fa-copy"></i> Copy</button>
+            </div>
+          </div>
+          <div id="citationBox" class="p-4 bg-slate-50 rounded-lg border border-slate-200 text-xs font-mono whitespace-pre-wrap text-slate-700"></div>
+        </div>
+
+        <div>
+          <div class="flex items-center justify-between mb-2">
+            <div>
+              <h3 class="text-sm font-bold text-slate-800 uppercase">UGC / ICMR AI-Use Transparency Declaration</h3>
+              <p class="text-xs text-slate-500">Standardized declaration of generative AI usage for academic thesis submission.</p>
+            </div>
+            <button onclick="copyToClipboard('aiDeclarationBox')" class="text-xs text-indigo-600 font-medium"><i class="fa-regular fa-copy"></i> Copy</button>
+          </div>
+          <div id="aiDeclarationBox" class="p-4 bg-slate-50 rounded-lg border border-slate-200 text-xs leading-relaxed text-slate-700"></div>
+        </div>
+      </div>
+    </section>
+  </main>
+
+  <!-- Settings Modal -->
+  <div id="settingsModal" class="fixed inset-0 bg-slate-900/40 backdrop-blur-sm z-50 flex items-center justify-center hidden">
+    <div class="bg-white rounded-xl shadow-xl max-w-md w-full p-6 space-y-4 border border-slate-200">
+      <h3 class="text-base font-bold text-slate-900">Gemini API Key Configuration</h3>
+      <p class="text-xs text-slate-500">Your key is stored locally in your browser's <code class="bg-slate-100 px-1 py-0.5 rounded">localStorage</code> and never sent to any external server.</p>
+      <input id="apiKeyInput" type="password" placeholder="AIzaSy..." class="w-full px-3 py-2 text-sm border border-slate-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-indigo-500" />
+      <div class="flex justify-end gap-2 pt-2">
+        <button onclick="closeSettingsModal()" class="px-4 py-2 text-xs font-medium text-slate-600 hover:bg-slate-100 rounded-lg">Cancel</button>
+        <button onclick="saveApiKey()" class="px-4 py-2 text-xs font-semibold bg-indigo-600 hover:bg-indigo-700 text-white rounded-lg">Save Key</button>
+      </div>
+    </div>
+  </div>
+
+  <script>
+    // --- State Management ---
+    let projects = JSON.parse(localStorage.getItem('os_projects')) || [{ id: 'proj-default', name: 'Primary Thesis Review', papers: [] }];
+    let activeProjectId = localStorage.getItem('os_active_project') || 'proj-default';
+    let apiKey = localStorage.getItem('os_gemini_key') || '';
+
+    // --- Inverted Index Abstract Parser for OpenAlex ---
+    function parseAbstract(invertedIndex) {
+      if (!invertedIndex) return "No abstract text available.";
+      const words = [];
+      for (const [word, positions] of Object.entries(invertedIndex)) {
+        positions.forEach(pos => words[pos] = word);
+      }
+      return words.join(" ");
+    }
+
+    // --- Lifecycle ---
+    window.addEventListener('DOMContentLoaded', () => {
+      renderProjects();
+      renderBasket();
+      generateCitations();
+      generateAIDeclaration();
+    });
+
+    function saveState() {
+      localStorage.setItem('os_projects', JSON.stringify(projects));
+      localStorage.setItem('os_active_project', activeProjectId);
+      renderProjects();
+      renderBasket();
+      generateCitations();
+      generateAIDeclaration();
+    }
+
+    function getActiveProject() {
+      return projects.find(p => p.id === activeProjectId) || projects[0];
+    }
+
+    // --- Tab Switching ---
+    function switchTab(tab) {
+      ['search', 'agent', 'export'].forEach(t => {
+        document.getElementById(`panel-${t}`).classList.toggle('hidden', t !== tab);
+        const btn = document.getElementById(`tab-${t}`);
+        if (t === tab) {
+          btn.className = "tab-btn px-4 py-2 text-sm font-semibold text-indigo-600 border-b-2 border-indigo-600 flex items-center gap-2";
+        } else {
+          btn.className = "tab-btn px-4 py-2 text-sm font-semibold text-slate-500 hover:text-slate-800 border-b-2 border-transparent flex items-center gap-2";
+        }
+      });
+      if (tab === 'export') {
+        generateCitations();
+        generateAIDeclaration();
+      }
+    }
+
+    // --- Project Operations ---
+    function renderProjects() {
+      const list = document.getElementById('projectList');
+      list.innerHTML = projects.map(p => `
+        <div onclick="selectProject('${p.id}')" class="px-3 py-2 rounded-lg cursor-pointer flex items-center justify-between text-xs transition ${p.id === activeProjectId ? 'bg-indigo-50 text-indigo-700 font-bold border border-indigo-200' : 'hover:bg-slate-100 text-slate-700'}">
+          <span class="truncate max-w-[140px]"><i class="fa-regular fa-folder mr-1.5"></i>${p.name}</span>
+          <span class="text-[10px] bg-slate-200 text-slate-700 px-1.5 py-0.5 rounded-full">${p.papers.length}</span>
+        </div>
+      `).join('');
+    }
+
+    function createNewProject() {
+      const name = prompt("Enter project title (e.g., 'ICMR Grant Protocol' or 'Chapter 2 Review'):");
+      if (!name) return;
+      const id = 'proj-' + Date.now();
+      projects.push({ id, name, papers: [] });
+      activeProjectId = id;
+      saveState();
+    }
+
+    function selectProject(id) {
+      activeProjectId = id;
+      saveState();
+    }
+
+    // --- OpenAlex Scholarly Search Engine ---
+    async function searchOpenAlex(e) {
+      e.preventDefault();
+      const query = document.getElementById('searchQuery').value.trim();
+      if (!query) return;
+      
+      const resultsContainer = document.getElementById('searchResults');
+      resultsContainer.innerHTML = `<div class="text-center py-8 text-indigo-600"><i class="fa-solid fa-circle-notch fa-spin text-2xl"></i><p class="text-xs mt-2 text-slate-500">Querying 250M+ peer-reviewed records...</p></div>`;
+
+      try {
+        const url = `https://api.openalex.org/works?search=${encodeURIComponent(query)}&per-page=10`;
+        const res = await fetch(url);
+        const data = await res.json();
+        
+        if (!data.results || data.results.length === 0) {
+          resultsContainer.innerHTML = `<p class="text-sm text-slate-500 text-center py-6">No matching records found.</p>`;
+          return;
+        }
+
+        resultsContainer.innerHTML = data.results.map((paper, idx) => {
+          const authors = paper.authorships ? paper.authorships.map(a => a.author.display_name).slice(0, 3).join(", ") + (paper.authorships.length > 3 ? " et al." : "") : "Unknown Authors";
+          const abstract = parseAbstract(paper.abstract_inverted_index);
+          const doi = paper.doi || (paper.ids ? paper.ids.doi : 'N/A');
+          const pdfUrl = paper.primary_location && paper.primary_location.pdf_url ? paper.primary_location.pdf_url : null;
+          const year = paper.publication_year || 'N/D';
+          const journal = paper.primary_location && paper.primary_location.source ? paper.primary_location.source.display_name : 'Academic Source';
+
+          return `
+            <div class="p-4 border border-slate-200 rounded-lg hover:border-slate-300 transition bg-white space-y-2">
+              <div class="flex items-start justify-between gap-2">
+                <h4 class="font-semibold text-sm text-slate-900 leading-snug">${paper.title}</h4>
+                <button onclick='addPaperToProject(${JSON.stringify({ id: paper.id, title: paper.title, authors, year, journal, doi, abstract: abstract.substring(0, 500) }).replace(/'/g, "&apos;")})' class="shrink-0 px-2.5 py-1 bg-indigo-50 hover:bg-indigo-100 text-indigo-700 text-xs font-semibold rounded border border-indigo-200 flex items-center gap-1">
+                  <i class="fa-solid fa-bookmark"></i> Save
+                </button>
+              </div>
+              <p class="text-xs text-slate-600 font-medium">${authors} • <span class="text-slate-500">${journal} (${year})</span></p>
+              <p class="text-xs text-slate-500 line-clamp-3 leading-relaxed">${abstract}</p>
+              <div class="flex items-center gap-3 pt-1 text-[11px] text-slate-400">
+                <span>Citations: <strong class="text-slate-600">${paper.cited_by_count || 0}</strong></span>
+                ${doi !== 'N/A' ? `<a href="${doi}" target="_blank" class="text-indigo-600 hover:underline">DOI <i class="fa-solid fa-arrow-up-right-from-square text-[9px]"></i></a>` : ''}
+                ${pdfUrl ? `<a href="${pdfUrl}" target="_blank" class="text-emerald-600 hover:underline font-semibold"><i class="fa-regular fa-file-pdf"></i> PDF</a>` : ''}
+              </div>
+            </div>
+          `;
+        }).join('');
+      } catch (err) {
+        resultsContainer.innerHTML = `<div class="p-4 bg-rose-50 text-rose-700 text-xs rounded-lg">Error fetching research data: ${err.message}</div>`;
+      }
+    }
+
+    function addPaperToProject(paper) {
+      const project = getActiveProject();
+      if (project.papers.some(p => p.id === paper.id)) {
+        alert("Paper already exists in the active project.");
+        return;
+      }
+      project.papers.push(paper);
+      saveState();
+    }
+
+    function removePaper(paperId) {
+      const project = getActiveProject();
+      project.papers = project.papers.filter(p => p.id !== paperId);
+      saveState();
+    }
+
+    function clearBasket() {
+      if (confirm("Remove all saved papers from this project?")) {
+        const project = getActiveProject();
+        project.papers = [];
+        saveState();
+      }
+    }
+
+    function renderBasket() {
+      const project = getActiveProject();
+      document.getElementById('basketCount').textContent = project.papers.length;
+      const list = document.getElementById('savedPapersList');
+      if (project.papers.length === 0) {
+        list.innerHTML = `<p class="text-slate-400 italic">No papers saved to this project yet.</p>`;
+        return;
+      }
+      list.innerHTML = project.papers.map(p => `
+        <div class="p-2 bg-slate-50 border border-slate-200 rounded flex items-start justify-between gap-2">
+          <div>
+            <div class="font-semibold text-slate-800 line-clamp-1">${p.title}</div>
+            <div class="text-[10px] text-slate-500">${p.authors.split(',')[0]} et al. (${p.year})</div>
+          </div>
+          <button onclick="removePaper('${p.id}')" class="text-slate-400 hover:text-rose-600 text-[10px] p-1"><i class="fa-solid fa-xmark"></i></button>
+        </div>
+      `).join('');
+    }
+
+    // --- Gemini AI Research Agent Workflows ---
+    async function runAgentWorkflow(type) {
+      if (!apiKey) {
+        openSettingsModal();
+        return;
+      }
+      const project = getActiveProject();
+      if (project.papers.length === 0) {
+        alert("Please search and add at least 1-2 papers to your project basket first!");
+        return;
+      }
+
+      const outputDiv = document.getElementById('agentOutput');
+      outputDiv.innerHTML = `<div class="text-center py-6 text-indigo-600"><i class="fa-solid fa-spinner fa-spin text-xl"></i><p class="text-xs mt-2 text-slate-500">Synthesizing ${project.papers.length} peer-reviewed papers via Gemini API...</p></div>`;
+
+      const customInstructions = document.getElementById('agentCustomPrompt').value.trim();
+      const literatureContext = project.papers.map((p, i) => `[Source ${i+1}]: "${p.title}" (${p.year}) by ${p.authors}. Abstract: ${p.abstract}`).join("\n\n");
+
+      let systemPrompt = "";
+      if (type === 'gap') {
+        systemPrompt = `You are a Principal Academic Research Supervisor. Analyze the provided literature sources and identify critical Research Gaps, methodological limitations, conflicting findings, and recommended next hypotheses.\n\nContext Sources:\n${literatureContext}\n\nAdditional Guidance: ${customInstructions}`;
+      } else if (type === 'matrix') {
+        systemPrompt = `You are an Academic Synthesis Assistant. Generate a structured Synthesis Matrix (in Markdown table format) comparing the Study Design, Cohort/Setting, Key Findings, and Limitations of the provided sources:\n\n${literatureContext}\n\nAdditional Guidance: ${customInstructions}`;
+      } else if (type === 'chapter') {
+        systemPrompt = `You are an Academic Writing Assistant. Write a comprehensive, cohesive Literature Review section synthesizing the provided papers. Use formal academic tone, integrate inline numbered citations (e.g., [1], [2]), and avoid unsubstantiated claims.\n\nSources:\n${literatureContext}\n\nAdditional Guidance: ${customInstructions}`;
+      }
+
+      try {
+        const response = await fetch(`https://generativelanguage.googleapis.com/v1beta/models/gemini-2.5-flash:generateContent?key=${apiKey}`, {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify({
+            contents: [{ parts: [{ text: systemPrompt }] }]
+          })
+        });
+        const data = await response.json();
+        if (data.error) throw new Error(data.error.message);
+        const resultText = data.candidates[0].content.parts[0].text;
+        outputDiv.innerText = resultText;
+      } catch (err) {
+        outputDiv.innerHTML = `<div class="p-3 bg-rose-50 text-rose-700 text-xs rounded">Gemini Error: ${err.message}</div>`;
+      }
+    }
+
+    // --- Bibliography & Declaration Generator ---
+    function generateCitations() {
+      const project = getActiveProject();
+      const style = document.getElementById('citationStyle').value;
+      const box = document.getElementById('citationBox');
+
+      if (project.papers.length === 0) {
+        box.textContent = "No saved papers to generate citations.";
+        return;
+      }
+
+      const citations = project.papers.map((p, i) => {
+        if (style === 'vancouver') {
+          return `${i + 1}. ${p.authors}. ${p.title}. ${p.journal}. ${p.year}; DOI: ${p.doi}`;
+        } else if (style === 'apa') {
+          return `${p.authors} (${p.year}). ${p.title}. ${p.journal}. ${p.doi}`;
+        } else {
+          return `${p.authors}, ${p.year}. ${p.title}. ${p.journal}. Available at: ${p.doi}`;
+        }
+      }).join("\n\n");
+
+      box.textContent = citations;
+    }
+
+    function generateAIDeclaration() {
+      const project = getActiveProject();
+      const box = document.getElementById('aiDeclarationBox');
+      const text = `DECLARATION ON THE USE OF GENERATIVE ARTIFICIAL INTELLIGENCE\n\nProject / Work: "${project.name}"\nDate: ${new Date().toLocaleDateString()}\n\n1. AI Technology Utilized: Google Gemini 2.5 Flash via OpenScholar Sathi Architecture.\n2. Scope of Assistance: Generative AI was used strictly for literature gap categorization, synthesizing abstract matrices, and grammatical structuring of author-directed drafts.\n3. Grounding Sources: All factual assertions and clinical claims were directly grounded in ${project.papers.length} DOI-indexed peer-reviewed references indexed in OpenAlex.\n4. Human Oversight: The author has verified all synthesized texts, calculations, and bibliographic references for accuracy and accepts full intellectual responsibility for the final document.`;
+      box.textContent = text;
+    }
+
+    // --- Helpers ---
+    function openSettingsModal() {
+      document.getElementById('apiKeyInput').value = apiKey;
+      document.getElementById('settingsModal').classList.remove('hidden');
+    }
+    function closeSettingsModal() {
+      document.getElementById('settingsModal').classList.add('hidden');
+    }
+    function saveApiKey() {
+      apiKey = document.getElementById('apiKeyInput').value.trim();
+      localStorage.setItem('os_gemini_key', apiKey);
+      closeSettingsModal();
+    }
+    function copyToClipboard(elementId) {
+      const text = document.getElementById(elementId).innerText;
+      navigator.clipboard.writeText(text).then(() => alert("Copied to clipboard!"));
+    }
+  </script>
+</body>
+</html>
